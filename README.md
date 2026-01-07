@@ -3,6 +3,7 @@
 ![NPM Version](https://img.shields.io/npm/v/faye-redis-ng)
 [![Node.js Version](https://img.shields.io/node/v/faye-redis-ng.svg)](https://nodejs.org)
 [![CI](https://github.com/7a6163/faye-redis-node/workflows/CI/badge.svg)](https://github.com/7a6163/faye-redis-node/actions)
+[![codecov](https://codecov.io/gh/7a6163/faye-redis-node/branch/master/graph/badge.svg)](https://codecov.io/gh/7a6163/faye-redis-node)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Next Generation** Redis backend engine for [Faye](http://faye.jcoglan.com) - A modern, maintained fork with Redis v4 support, ES6+ syntax, and automatic reconnection.
@@ -13,11 +14,13 @@ This is a modernized fork of the original [faye-redis](https://github.com/7a6163
 
 ### ✨ Key Improvements
 
+- ✅ **TypeScript Support** - Full TypeScript rewrite with type definitions
 - ✅ **Redis v4 Support** - Uses modern Promise-based Redis client API
 - ✅ **ES6+ Syntax** - Modern JavaScript with classes, async/await, const/let
 - ✅ **Auto-Reconnection** - Automatic Redis reconnection with exponential backoff
 - ✅ **Better Error Handling** - Comprehensive error logging and event triggers
 - ✅ **Node.js 22 LTS** - Updated for latest LTS Node.js version
+- ✅ **Modern Testing** - Vitest with 77%+ code coverage
 - ✅ **Zero Breaking Changes** - Drop-in replacement for original faye-redis
 
 ### 🔄 Why This Fork?

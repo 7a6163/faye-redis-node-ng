@@ -5,6 +5,67 @@ All notable changes to faye-redis-ng will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-01-07
+
+### Added
+- **TypeScript Support** - Complete TypeScript rewrite with full type definitions
+  - Main engine in `src/faye-redis.ts` with comprehensive type annotations
+  - Type definitions in `src/types.ts` for all interfaces and types
+  - Compiled output includes `.d.ts` files for TypeScript consumers
+  - Maintains full backward compatibility with JavaScript users
+- **Modern Testing Framework** - Migrated from jstest to Vitest
+  - 18 comprehensive test cases covering all engine functionality
+  - Test utilities and helpers in `tests/helpers.ts`
+  - Mock Faye server for isolated testing
+  - All tests passing with 77.5% code coverage
+- **Code Coverage Reporting** - Integrated Codecov for coverage tracking
+  - Coverage reports generated with v8 provider
+  - GitHub Actions integration for automatic coverage upload
+  - Coverage badge in README
+  - `codecov.yml` configuration with sensible defaults
+- **Development Scripts** - Enhanced npm scripts for modern workflow
+  - `test:coverage` - Run tests with coverage report
+  - `test:watch` - Watch mode for development
+  - `test:ui` - Interactive test UI
+  - `build:watch` - TypeScript compilation in watch mode
+
+### Changed
+- **Package Structure** - Reorganized for TypeScript workflow
+  - Source code moved to `src/` directory
+  - Tests moved to `tests/` directory
+  - Compiled output in `dist/` directory
+  - Added `tsconfig.json` for TypeScript configuration
+  - Added `vitest.config.ts` for test configuration
+- **Build Process** - TypeScript compilation before publishing
+  - `prepublishOnly` script runs TypeScript build automatically
+  - Main entry point now `dist/faye-redis.js` (compiled)
+  - Type definitions exported via `types` field in package.json
+- **CI/CD Pipeline** - Updated GitHub Actions workflows
+  - CI workflow now builds TypeScript and runs Vitest tests
+  - Coverage reports uploaded to Codecov automatically
+  - Publish workflow includes TypeScript build step
+  - Uses Valkey (Redis fork) for testing in CI
+
+### Removed
+- **Deprecated Test Files** - Cleaned up old test infrastructure
+  - Removed `spec/runner.js` and `spec/faye_redis_spec.js`
+  - Removed jstest dependency
+  - Removed temporary test files (`test-*.js`)
+  - Old JavaScript implementation (`faye-redis.js`) replaced by compiled TypeScript
+
+### Improved
+- **Type Safety** - Full type checking during development and build
+- **Developer Experience** - Modern tooling with better error messages
+- **Code Quality** - Stricter TypeScript compiler settings
+- **Test Coverage** - Comprehensive test suite with coverage tracking
+- **Documentation** - Added `.github/CODECOV_SETUP.md` for coverage setup guide
+
+### Technical Details
+- Coverage: 77.49% statements, 75.92% branches, 89.47% functions
+- TypeScript target: ES2023 (optimized for Node.js 22 LTS)
+- Test timeout: 10 seconds (configurable)
+- Valkey/Redis support: Both compatible in CI and local development
+
 ## [1.0.1] - 2026-01-07
 
 ### Fixed

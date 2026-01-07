@@ -1,18 +1,40 @@
-const redis = require('redis');
+import { createClient } from 'redis';
+import type {
+  EngineOptions,
+  FayeMessage,
+  FayeServer,
+  RedisClient,
+  CallbackContext,
+  ClientCallback,
+  ExistsCallback,
+  EmptyCallback
+} from './types';
 
 class Engine {
-  constructor(server, options = {}) {
+  private readonly DEFAULT_HOST = 'localhost';
+  private readonly DEFAULT_PORT = 6379;
+  private readonly DEFAULT_DATABASE = 0;
+  private readonly DEFAULT_GC = 60;
+  private readonly LOCK_TIMEOUT = 120;
+
+  private _server: FayeServer;
+  private _options: EngineOptions;
+  private _ns: string;
+  private _messageChannel: string;
+  private _closeChannel: string;
+  private _redis: RedisClient | null = null;
+  private _subscriber: RedisClient | null = null;
+  private _initialized = false;
+  private _subscriptionsSetUp = false;
+  private _gc: NodeJS.Timeout;
+
+  constructor(server: FayeServer, options: EngineOptions = {}) {
     this._server = server;
     this._options = options;
 
     this._ns = options.namespace || '';
     this._messageChannel = this._ns + '/notifications/messages';
     this._closeChannel = this._ns + '/notifications/close';
-
-    // Initialize clients (will be connected in _initializeClients)
-    this._redis = null;
-    this._subscriber = null;
-    this._initialized = false;
 
     // Start initialization
     this._initializeClients().catch(err => {
@@ -23,7 +45,7 @@ class Engine {
     this._gc = setInterval(() => this.gc(), gc * 1000);
   }
 
-  async _initializeClients() {
+  private async _initializeClients(): Promise<void> {
     const host = this._options.host || this.DEFAULT_HOST;
     const port = this._options.port || this.DEFAULT_PORT;
     const db = this._options.database || this.DEFAULT_DATABASE;
@@ -33,20 +55,31 @@ class Engine {
     const clientConfig = {
       database: db,
       ...(auth && { password: auth }),
-      ...(socket && { socket: { path: socket, reconnectStrategy: this._reconnectStrategy.bind(this) } }),
-      ...(!socket && { socket: { host, port, reconnectStrategy: this._reconnectStrategy.bind(this) } })
+      ...(socket && {
+        socket: {
+          path: socket,
+          reconnectStrategy: this._reconnectStrategy.bind(this)
+        }
+      }),
+      ...(!socket && {
+        socket: {
+          host,
+          port,
+          reconnectStrategy: this._reconnectStrategy.bind(this)
+        }
+      })
     };
 
-    this._redis = redis.createClient(clientConfig);
-    this._subscriber = redis.createClient(clientConfig);
+    this._redis = createClient(clientConfig);
+    this._subscriber = createClient(clientConfig);
 
     // Set up error handlers
-    this._redis.on('error', (err) => {
+    this._redis.on('error', (err: Error) => {
       console.error('Redis client error:', err);
       this._server.trigger('error', err);
     });
 
-    this._subscriber.on('error', (err) => {
+    this._subscriber.on('error', (err: Error) => {
       console.error('Redis subscriber error:', err);
       this._server.trigger('error', err);
     });
@@ -67,19 +100,16 @@ class Engine {
       this._initialized = true;
     });
 
-    // Track if we've already set up subscriptions to prevent duplicates
-    this._subscriptionsSetUp = false;
-
     this._subscriber.on('ready', async () => {
       console.log('Redis subscriber ready');
       // Only re-subscribe after reconnection (not on initial connection)
       if (this._subscriptionsSetUp) {
         console.log('Redis subscriber reconnected, re-subscribing...');
         try {
-          await this._subscriber.subscribe(this._messageChannel, (message) => {
+          await this._subscriber!.subscribe(this._messageChannel, (message) => {
             this.emptyQueue(message);
           });
-          await this._subscriber.subscribe(this._closeChannel, (message) => {
+          await this._subscriber!.subscribe(this._closeChannel, (message) => {
             this._server.trigger('close', message);
           });
           this._initialized = true;
@@ -105,7 +135,7 @@ class Engine {
     this._initialized = true;
   }
 
-  _reconnectStrategy(retries) {
+  private _reconnectStrategy(retries: number): number | Error {
     // Exponential backoff with max delay of 10 seconds
     if (retries > 20) {
       // After 20 retries, give up (roughly 2 minutes)
@@ -117,27 +147,31 @@ class Engine {
     return delay;
   }
 
-  async _waitForInit() {
+  private async _waitForInit(): Promise<void> {
     while (!this._initialized) {
       await new Promise(resolve => setTimeout(resolve, 10));
     }
   }
 
-  static create(server, options) {
+  static create(server: FayeServer, options?: EngineOptions): Engine {
     return new this(server, options);
   }
 
-  async disconnect() {
-    await this._subscriber.unsubscribe();
-    await this._redis.quit();
-    await this._subscriber.quit();
+  async disconnect(): Promise<void> {
+    if (this._subscriber) {
+      await this._subscriber.unsubscribe();
+      await this._subscriber.quit();
+    }
+    if (this._redis) {
+      await this._redis.quit();
+    }
     clearInterval(this._gc);
   }
 
-  createClient(callback, context) {
+  createClient(callback: ClientCallback, context: CallbackContext): void {
     this._waitForInit().then(async () => {
       const clientId = this._server.generateId();
-      const added = await this._redis.zAdd(this._ns + '/clients', {
+      const added = await this._redis!.zAdd(this._ns + '/clients', {
         score: 0,
         value: clientId
       }, { NX: true });
@@ -155,22 +189,22 @@ class Engine {
     });
   }
 
-  clientExists(clientId, callback, context) {
+  clientExists(clientId: string, callback: ExistsCallback, context: CallbackContext): void {
     this._waitForInit().then(async () => {
       const cutoff = new Date().getTime() - (1000 * 1.6 * this._server.timeout);
-      const score = await this._redis.zScore(this._ns + '/clients', clientId);
-      callback.call(context, score ? parseInt(score, 10) > cutoff : false);
+      const score = await this._redis!.zScore(this._ns + '/clients', clientId);
+      callback.call(context, score ? parseInt(score.toString(), 10) > cutoff : false);
     }).catch(err => {
       console.error('Error checking client existence:', err);
       callback.call(context, false);
     });
   }
 
-  destroyClient(clientId, callback, context) {
+  destroyClient(clientId: string, callback?: EmptyCallback, context?: CallbackContext): void {
     this._waitForInit().then(async () => {
-      const channels = await this._redis.sMembers(this._ns + '/clients/' + clientId + '/channels');
+      const channels = await this._redis!.sMembers(this._ns + '/clients/' + clientId + '/channels');
 
-      const multi = this._redis.multi();
+      const multi = this._redis!.multi();
       multi.zAdd(this._ns + '/clients', { score: 0, value: clientId });
 
       for (const channel of channels) {
@@ -200,7 +234,7 @@ class Engine {
     });
   }
 
-  ping(clientId) {
+  ping(clientId: string): void {
     const timeout = this._server.timeout;
     if (typeof timeout !== 'number') return;
 
@@ -208,20 +242,20 @@ class Engine {
 
     this._server.debug('Ping ?, ?', clientId, time);
     this._waitForInit().then(async () => {
-      await this._redis.zAdd(this._ns + '/clients', { score: time, value: clientId });
+      await this._redis!.zAdd(this._ns + '/clients', { score: time, value: clientId });
     }).catch(err => {
       console.error('Error pinging client:', err);
     });
   }
 
-  subscribe(clientId, channel, callback, context) {
+  subscribe(clientId: string, channel: string, callback?: EmptyCallback, context?: CallbackContext): void {
     this._waitForInit().then(async () => {
-      const added = await this._redis.sAdd(this._ns + '/clients/' + clientId + '/channels', channel);
+      const added = await this._redis!.sAdd(this._ns + '/clients/' + clientId + '/channels', channel);
       if (added === 1) {
         this._server.trigger('subscribe', clientId, channel);
       }
 
-      await this._redis.sAdd(this._ns + '/channels' + channel, clientId);
+      await this._redis!.sAdd(this._ns + '/channels' + channel, clientId);
       this._server.debug('Subscribed client ? to channel ?', clientId, channel);
       if (callback) callback.call(context);
     }).catch(err => {
@@ -230,14 +264,14 @@ class Engine {
     });
   }
 
-  unsubscribe(clientId, channel, callback, context) {
+  unsubscribe(clientId: string, channel: string, callback?: EmptyCallback, context?: CallbackContext): void {
     this._waitForInit().then(async () => {
-      const removed = await this._redis.sRem(this._ns + '/clients/' + clientId + '/channels', channel);
+      const removed = await this._redis!.sRem(this._ns + '/clients/' + clientId + '/channels', channel);
       if (removed === 1) {
         this._server.trigger('unsubscribe', clientId, channel);
       }
 
-      await this._redis.sRem(this._ns + '/channels' + channel, clientId);
+      await this._redis!.sRem(this._ns + '/channels' + channel, clientId);
       this._server.debug('Unsubscribed client ? from channel ?', clientId, channel);
       if (callback) callback.call(context);
     }).catch(err => {
@@ -246,28 +280,28 @@ class Engine {
     });
   }
 
-  publish(message, channels) {
+  publish(message: FayeMessage, channels: string[]): void {
     this._server.debug('Publishing message ?', message);
 
     this._waitForInit().then(async () => {
       const jsonMessage = JSON.stringify(message);
       const keys = channels.map(c => this._ns + '/channels' + c);
 
-      const clients = await this._redis.sUnion(keys);
+      const clients = await this._redis!.sUnion(keys);
 
       for (const clientId of clients) {
         const queue = this._ns + '/clients/' + clientId + '/messages';
 
         this._server.debug('Queueing for client ?: ?', clientId, message);
-        await this._redis.rPush(queue, jsonMessage);
-        await this._redis.publish(this._messageChannel, clientId);
+        await this._redis!.rPush(queue, jsonMessage);
+        await this._redis!.publish(this._messageChannel, clientId);
 
-        const exists = await new Promise((resolve) => {
+        const exists = await new Promise<boolean>((resolve) => {
           this.clientExists(clientId, resolve, null);
         });
 
         if (!exists) {
-          await this._redis.del(queue);
+          await this._redis!.del(queue);
         }
       }
 
@@ -277,21 +311,21 @@ class Engine {
     });
   }
 
-  emptyQueue(clientId) {
+  emptyQueue(clientId: string): void {
     if (!this._server.hasConnection(clientId)) return;
 
     this._waitForInit().then(async () => {
       const key = this._ns + '/clients/' + clientId + '/messages';
-      const multi = this._redis.multi();
+      const multi = this._redis!.multi();
 
       multi.lRange(key, 0, -1);
       multi.del(key);
 
       const results = await multi.exec();
-      const jsonMessages = results[0];
+      const jsonMessages = results[0] as string[];
 
       if (jsonMessages && jsonMessages.length > 0) {
-        const messages = jsonMessages.map(json => JSON.parse(json));
+        const messages = jsonMessages.map(json => JSON.parse(json) as FayeMessage);
         this._server.deliver(clientId, messages);
       }
     }).catch(err => {
@@ -299,14 +333,14 @@ class Engine {
     });
   }
 
-  gc() {
+  gc(): void {
     const timeout = this._server.timeout;
     if (typeof timeout !== 'number') return;
 
     this._withLock('gc', async (releaseLock) => {
       const cutoff = new Date().getTime() - 1000 * 2 * timeout;
 
-      const clients = await this._redis.zRangeByScore(this._ns + '/clients', 0, cutoff);
+      const clients = await this._redis!.zRangeByScore(this._ns + '/clients', 0, cutoff);
 
       if (clients.length === 0) {
         releaseLock();
@@ -325,30 +359,30 @@ class Engine {
     });
   }
 
-  _withLock(lockName, callback) {
+  private _withLock(lockName: string, callback: (releaseLock: () => Promise<void>) => void): void {
     this._waitForInit().then(async () => {
       const lockKey = this._ns + '/locks/' + lockName;
       const currentTime = new Date().getTime();
       const expiry = currentTime + this.LOCK_TIMEOUT * 1000 + 1;
 
-      const releaseLock = async () => {
+      const releaseLock = async (): Promise<void> => {
         if (new Date().getTime() < expiry) {
-          await this._redis.del(lockKey);
+          await this._redis!.del(lockKey);
         }
       };
 
-      const set = await this._redis.setNX(lockKey, expiry.toString());
+      const set = await this._redis!.setNX(lockKey, expiry.toString());
       if (set) {
         return callback.call(this, releaseLock);
       }
 
-      const timeout = await this._redis.get(lockKey);
+      const timeout = await this._redis!.get(lockKey);
       if (!timeout) return;
 
       const lockTimeout = parseInt(timeout, 10);
       if (currentTime < lockTimeout) return;
 
-      const oldValue = await this._redis.set(lockKey, expiry.toString(), { GET: true });
+      const oldValue = await this._redis!.set(lockKey, expiry.toString(), { GET: true });
       if (oldValue === timeout) {
         callback.call(this, releaseLock);
       }
@@ -358,10 +392,6 @@ class Engine {
   }
 }
 
-Engine.prototype.DEFAULT_HOST = 'localhost';
-Engine.prototype.DEFAULT_PORT = 6379;
-Engine.prototype.DEFAULT_DATABASE = 0;
-Engine.prototype.DEFAULT_GC = 60;
-Engine.prototype.LOCK_TIMEOUT = 120;
-
-module.exports = Engine;
+export default Engine;
+export { Engine };
+export type { EngineOptions, FayeMessage, FayeServer };

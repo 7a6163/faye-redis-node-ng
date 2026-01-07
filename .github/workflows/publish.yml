@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build TypeScript
+        run: npm run build
+
       - name: Verify package version matches tag
         run: |
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
@@ -38,10 +41,6 @@ jobs:
             exit 1
           fi
           echo "✅ Version match: $PACKAGE_VERSION"
-
-      - name: Run tests (if available)
-        run: npm test || echo "⚠️ Tests skipped (require Redis)"
-        continue-on-error: true
 
       - name: Build package
         run: npm pack
