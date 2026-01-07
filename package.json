@@ -1,22 +1,37 @@
-{ "name"            : "faye-redis-ng"
-, "description"     : "Modern Redis backend engine for Faye (Next Generation fork with Redis v4, ES6+, auto-reconnection)"
-, "homepage"        : "http://github.com/faye/faye-redis-node"
-, "author"          : "James Coglan <jcoglan@gmail.com> (http://jcoglan.com/)"
-, "contributors"    : ["Modernized and maintained by the community"]
-, "keywords"        : ["faye", "redis", "pubsub", "bayeux", "websocket", "messaging", "realtime"]
-, "license"         : "MIT"
-
-, "version"         : "1.0.1"
-, "engines"         : {"node": ">=22.0.0"}
-, "main"            : "./faye-redis"
-, "dependencies"    : {"redis": "^4.7.0"}
-, "devDependencies" : {"jstest": "^1.0.5"}
-
-, "scripts"         : {"test": "node spec/runner.js"}
-
-, "bugs"            : "http://github.com/faye/faye-redis-node/issues"
-
-, "repository"      : { "type"  : "git"
-                      , "url"   : "git://github.com/faye/faye-redis-node.git"
-                      }
+{
+  "name": "faye-redis-ng",
+  "description": "Modern Redis backend engine for Faye (Next Generation fork with Redis v4, ES6+, auto-reconnection)",
+  "homepage": "http://github.com/7a6163/faye-redis-node",
+  "contributors": [
+    "Modernized and maintained by the community"
+  ],
+  "keywords": [
+    "faye",
+    "redis",
+    "pubsub",
+    "bayeux",
+    "websocket",
+    "messaging",
+    "realtime"
+  ],
+  "license": "MIT",
+  "version": "1.0.1",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "main": "./faye-redis",
+  "dependencies": {
+    "redis": "^4.7.0"
+  },
+  "devDependencies": {
+    "jstest": "^1.0.5"
+  },
+  "scripts": {
+    "test": "node spec/runner.js"
+  },
+  "bugs": "http://github.com/7a6163/faye-redis-node/issues",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/7a6163/faye-redis-node.git"
+  }
 }
