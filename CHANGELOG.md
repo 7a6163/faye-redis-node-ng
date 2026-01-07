@@ -5,6 +5,22 @@ All notable changes to faye-redis-ng will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-01-07
+
+### Fixed
+- **Backward compatibility**: Implemented pure TypeScript CommonJS compatibility
+  - Created `src/index.ts` as entry point using `export =` syntax
+  - Now `require('faye-redis-ng')` directly returns the `Engine` class (old usage)
+  - Also supports `const { Engine } = require('faye-redis-ng')` (new usage)
+  - Removed JavaScript compatibility layer, replaced with pure TypeScript implementation
+
+### Changed
+- Main entry point changed to `dist/index.js` (compiled from `src/index.ts`)
+- Package `main` field updated to point to `dist/index.js`
+- Package `types` field updated to point to `dist/index.d.ts`
+- Maintains full TypeScript type definitions
+- No additional .js compatibility files needed
+
 ## [1.1.0] - 2026-01-07
 
 ### Added
