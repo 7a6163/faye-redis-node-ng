@@ -1,7 +1,7 @@
 {
   "name": "faye-redis-ng",
   "description": "Modern Redis backend engine for Faye (Next Generation fork with Redis v4, ES6+, auto-reconnection)",
-  "homepage": "http://github.com/7a6163/faye-redis-node",
+  "homepage": "https://github.com/7a6163/faye-redis-node-ng",
   "contributors": [
     "Modernized and maintained by the community"
   ],
@@ -46,9 +46,9 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage"
   },
-  "bugs": "http://github.com/7a6163/faye-redis-node/issues",
+  "bugs": "https://github.com/7a6163/faye-redis-node-ng/issues",
   "repository": {
     "type": "git",
-    "url": "git://github.com/7a6163/faye-redis-node.git"
+    "url": "git+https://github.com/7a6163/faye-redis-node-ng.git"
   }
 }
