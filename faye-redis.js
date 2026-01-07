@@ -67,25 +67,32 @@ class Engine {
       this._initialized = true;
     });
 
+    // Track if we've already set up subscriptions to prevent duplicates
+    this._subscriptionsSetUp = false;
+
     this._subscriber.on('ready', async () => {
       console.log('Redis subscriber ready');
-      // Re-subscribe after reconnection
-      try {
-        await this._subscriber.subscribe(this._messageChannel, (message) => {
-          this.emptyQueue(message);
-        });
-        await this._subscriber.subscribe(this._closeChannel, (message) => {
-          this._server.trigger('close', message);
-        });
-        this._initialized = true;
-      } catch (err) {
-        console.error('Error re-subscribing after reconnection:', err);
+      // Only re-subscribe after reconnection (not on initial connection)
+      if (this._subscriptionsSetUp) {
+        console.log('Redis subscriber reconnected, re-subscribing...');
+        try {
+          await this._subscriber.subscribe(this._messageChannel, (message) => {
+            this.emptyQueue(message);
+          });
+          await this._subscriber.subscribe(this._closeChannel, (message) => {
+            this._server.trigger('close', message);
+          });
+          this._initialized = true;
+        } catch (err) {
+          console.error('Error re-subscribing after reconnection:', err);
+        }
       }
     });
 
     await this._redis.connect();
     await this._subscriber.connect();
 
+    // Initial subscription (only once)
     await this._subscriber.subscribe(this._messageChannel, (message) => {
       this.emptyQueue(message);
     });
@@ -94,6 +101,7 @@ class Engine {
       this._server.trigger('close', message);
     });
 
+    this._subscriptionsSetUp = true;
     this._initialized = true;
   }
 
