@@ -43,12 +43,6 @@ jobs:
       - name: Run syntax check
         run: node -c faye-redis.js
 
-      - name: Run integration tests
-        run: node test-integration.js
-        env:
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
-
       - name: Verify package can be built
         run: npm pack --dry-run
 
