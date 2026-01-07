@@ -1,10 +1,42 @@
+# Git and version control
 .git
 .gitignore
 .gitmodules
-.npmignore
+
+# CI/CD
 .travis.yml
-dump.rdb
+
+# Development files
+.npmignore
 Makefile
-node_modules
-spec
-vendor
+
+# Test files
+spec/
+vendor/
+test-*.js
+
+# Dependencies
+node_modules/
+
+# Redis data files
+dump.rdb
+*.rdb
+
+# Editor and IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Keep documentation files (these will be included)
+# README.md
+# CLAUDE.md
+# REFACTORING.md
+# CHANGELOG.md
+# LICENSE
+# NPM_PUBLISH.md

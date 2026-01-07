@@ -147,7 +147,7 @@ class Engine {
     });
   }
 
-  clientExists(callback, context, clientId) {
+  clientExists(clientId, callback, context) {
     this._waitForInit().then(async () => {
       const cutoff = new Date().getTime() - (1000 * 1.6 * this._server.timeout);
       const score = await this._redis.zScore(this._ns + '/clients', clientId);
@@ -255,7 +255,7 @@ class Engine {
         await this._redis.publish(this._messageChannel, clientId);
 
         const exists = await new Promise((resolve) => {
-          this.clientExists(resolve, null, clientId);
+          this.clientExists(clientId, resolve, null);
         });
 
         if (!exists) {

@@ -1,12 +1,13 @@
-{ "name"            : "faye-redis"
-, "description"     : "Redis backend engine for Faye"
+{ "name"            : "faye-redis-ng"
+, "description"     : "Modern Redis backend engine for Faye (Next Generation fork with Redis v4, ES6+, auto-reconnection)"
 , "homepage"        : "http://github.com/faye/faye-redis-node"
 , "author"          : "James Coglan <jcoglan@gmail.com> (http://jcoglan.com/)"
-, "keywords"        : ["pubsub", "bayeux"]
+, "contributors"    : ["Modernized and maintained by the community"]
+, "keywords"        : ["faye", "redis", "pubsub", "bayeux", "websocket", "messaging", "realtime"]
 , "license"         : "MIT"
 
-, "version"         : "0.2.0"
-, "engines"         : {"node": ">=14.0.0"}
+, "version"         : "1.0.1"
+, "engines"         : {"node": ">=22.0.0"}
 , "main"            : "./faye-redis"
 , "dependencies"    : {"redis": "^4.7.0"}
 , "devDependencies" : {"jstest": "^1.0.5"}
