@@ -139,9 +139,11 @@ describe('Redis Engine', () => {
         engine.createClient(resolve, null);
       });
 
+      await delay(50); // Wait for client to be fully created
+
       // Ping the client
       engine.ping(clientId);
-      await delay(100);
+      await delay(200); // Increase delay to ensure ping completes
 
       const exists = await new Promise<boolean>((resolve) => {
         engine.clientExists(clientId, resolve, null);
@@ -420,7 +422,7 @@ describe('Redis Engine', () => {
       const message = createTestMessage('/test/channel', { text: 'Broadcast' });
       engine.publish(message, ['/test/channel']);
 
-      await delay(300);
+      await delay(500);
       expect(deliveredClients.has(client1)).toBe(true);
       expect(deliveredClients.has(client2)).toBe(true);
     });
@@ -436,17 +438,18 @@ describe('Redis Engine', () => {
       engine = new Engine(server, options);
       await delay(100);
 
-      let publishEvent: { channel?: string; data?: any } = {};
+      let publishEvent: { clientId?: string; channel?: string; data?: any } = {};
       server.on('publish', (clientId: string, channel: string, data: any) => {
-        publishEvent = { channel, data };
+        publishEvent = { clientId, channel, data };
       });
 
-      const message = createTestMessage('/test/channel', { text: 'Test' });
+      const message = createTestMessage('/test/channel', { text: 'Test' }, 'test-client');
       engine.publish(message, ['/test/channel']);
 
-      await delay(200);
+      await delay(400);
       expect(publishEvent.channel).toBe('/test/channel');
       expect(publishEvent.data).toEqual({ text: 'Test' });
+      expect(publishEvent.clientId).toBe('test-client');
     });
   });
 
